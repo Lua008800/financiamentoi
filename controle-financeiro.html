@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="pt-BR"> <!-- Removido 'class="dark"' para o JS controlar -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro Pessoal</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carrega os Ícones (Heroicons) - Trocado para JS Delivr para evitar CORS -->
+    <script type"module" src="https://cdn.jsdelivr.net/npm/heroicons@2.1.3/dist/solid/index.js"></script>
+    <script type"module" src="https://cdn.jsdelivr.net/npm/heroicons@2.1.3/dist/outline/index.js"></script>
+    <!-- Carrega a biblioteca de Gráficos (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Estilo para a barra de rolagem (opcional, mas melhora a estética) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #2d3748; /* cinza-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4a5568; /* cinza-600 */
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #718096; /* cinza-500 */
+        }
+
+        /* Classes para a animação do modal */
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        
+        /* Estilo do toggle switch moderno */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 120px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ef4444; /* red-500 */
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .slider-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0 10px;
+            user-select: none;
+        }
+        .text-receita {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .text-despesa {
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        
+        input:checked + .slider {
+            background-color: #22c55e; /* green-500 */
+        }
+        
+        input:checked + .slider .text-receita {
+            opacity: 1;
+        }
+        input:checked + .slider .text-despesa {
+            opacity: 0;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(86px);
+        }
+    </style>
+</head>
+<!-- Fundo branco para modo claro, bordas e cores de texto corretas -->
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+
+    <!-- Tela de Login / Registro (Inicialmente visível) -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <!-- Borda para modo claro -->
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200 dark:border-transparent">
+            <!-- Logo ou Título -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Controle Financeiro</h1>
+                <p class="text-gray-600 dark:text-gray-400">Seu assistente pessoal de finanças</p>
+            </div>
+            
+            <!-- Formulário de Login -->
+            <form id="login-form" class="space-y-6">
+                <h2 class="text-2xl font-semibold text-center">Faça Login</h2>
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                    <input type="email" id="login-email" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
+                    <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                </div>
+                <p id="login-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Entrar
+                </button>
+                <p class="text-center text-sm">
+                    Não tem uma conta? 
+                    <button type="button" id="show-register-btn" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Crie uma aqui
+                    </button>
+                </p>
+            </form>
+
+            <!-- Formulário de Registro (Inicialmente oculto) -->
+            <form id="register-form" class="space-y-6 hidden">
+                <h2 class="text-2xl font-semibold text-center">Criar Conta</h2>
+                <div>
+                    <label for="register-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                    <input type="email" id="register-email" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="register-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha (mín. 6 caracteres)</label>
+                    <input type="password" id="register-password" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                </div>
+                <p id="register-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Criar Conta
+                </button>
+                <p class="text-center text-sm">
+                    Já tem uma conta? 
+                    <button type="button" id="show-login-btn" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Faça login
+                    </button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela Principal do Aplicativo (Inicialmente oculta) -->
+    <div id="app-screen" class="min-h-screen hidden">
+        
+        <!-- Cabeçalho Fixo -->
+        <!-- Borda para modo claro -->
+        <header class="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40 border-b border-gray-200 dark:border-transparent">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <h1 class="text-xl md:text-2xl font-bold text-indigo-600 dark:text-indigo-400">Meu Controle Financeiro</h1>
+                
+                <div class="flex items-center space-x-2 md:space-x-4">
+                    <span class="text-sm hidden md:inline">Perfil:</span>
+                    <select id="profile-selector" class="h-10 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Carregando...</option>
+                    </select>
+                    
+                    <button id="manage-profiles-btn" class="h-10 py-2 px-3 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
+                        Gerenciar Perfis
+                    </button>
+
+                    <button id="logout-btn" class="h-10 py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg">
+                        Sair
+                    </button>
+                    
+                    <!-- Botão de Modo Escuro -->
+                    <button id="theme-toggle" class="h-10 w-10 flex items-center justify-center rounded-lg text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        <!-- Ícones trocados na lógica JS -->
+                        <svg id="theme-icon-light" class="w-5 h-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-6.364-.386l1.591-1.591M3 12h2.25m.386-6.364l1.591 1.591" /></svg>
+                        <svg id="theme-icon-dark" class="w-5 h-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal (Dashboard) -->
+        <main id="dashboard-page" class="container mx-auto p-4 md:p-6 lg:p-8">
+            
+            <!-- Resumo Financeiro -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                <!-- Borda para modo claro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Saldo Atual</h3>
+                    <p id="summary-balance" class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">R$ 0,00</p>
+                </div>
+                <!-- Borda para modo claro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Receita (Mês)</h3>
+                    <p id="summary-income" class="text-3xl font-bold text-green-500 mt-2">R$ 0,00</p>
+                </div>
+                <!-- Borda para modo claro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Despesa (Mês)</h3>
+                    <p id="summary-expense" class="text-3xl font-bold text-red-500 mt-2">R$ 0,00</p>
+                </div>
+            </section>
+            
+            <!-- Gasto Máximo por Dia -->
+            <section class="grid grid-cols-1 mb-6">
+                <!-- Borda para modo claro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Gasto Máximo por Dia</h3>
+                    <p id="summary-daily-spend" class="text-3xl font-bold text-blue-500 mt-2">R$ 0,00</p>
+                    <p id="daily-spend-warning" class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Calculado com base na sua **Receita do Mês** menos **contas fixas** e **despesas já lançadas**, dividido pelos dias restantes no mês.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Layout Principal (2 colunas) -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Coluna Esquerda: Ações e Transações -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Adicionar Nova Transação -->
+                    <!-- Borda para modo claro -->
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                        <h3 class="text-xl font-semibold mb-4">Adicionar Nova Transação</h3>
+                        <form id="transaction-form" class="space-y-4">
+                            
+                            <div class="text-center mb-6">
+                                <label for="trans-type-toggle" class="switch">
+                                    <input type="checkbox" id="trans-type-toggle">
+                                    <span class="slider">
+                                        <div class="slider-text">
+                                            <span class="text-receita">Receita</span>
+                                            <span class="text-despesa">Despesa</span>
+                                        </div>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="trans-desc" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
+                                    <input type="text" id="trans-desc" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                                </div>
+                                <div>
+                                    <label for="trans-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Categoria</label>
+                                    <select id="trans-category" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                                        <!-- Opções carregadas dinamicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="trans-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Valor (R$)</label>
+                                    <input type="text" id="trans-amount" placeholder="R$ 0,00" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                                </div>
+                                <div>
+                                    <label for="trans-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Data</label>
+                                    <input type="date" id="trans-date" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50">
+                                </div>
+                            </div>
+                            
+                            <div class="text-right pt-2">
+                                <button type="submit" class="w-full md:w-auto py-2 px-6 border shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    Adicionar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- GRÁFICO DE HISTÓRICO TOTAL -->
+                    <!-- Borda para modo claro -->
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                        <h3 class="text-xl font-semibold mb-4">Extrato Total (Histórico)</h3>
+                        <div class="h-80 flex items-center justify-center">
+                            <canvas id="total-history-chart"></canvas>
+                            <p id="history-chart-no-data" class="text-gray-500 hidden">Sem dados históricos para exibir.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Coluna Direita: Gráfico e Ações -->
+                <div class="lg:col-span-1 space-y-6">
+                    
+                    <!-- Outras Ações -->
+                    <!-- Borda para modo claro -->
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                        <h3 class="text-xl font-semibold mb-4">Outras Ações</h3>
+                        <div class="space-y-3">
+                            <!-- BOTÃO DE LANÇAR SALÁRIO -->
+                            <button id="launch-salary-btn" class="w-full text-left py-3 px-4 rounded-lg bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 transition-colors">
+                                Lançar Salário Líquido
+                            </button>
+                            <button id="open-fixed-bill-modal" class="w-full text-left py-3 px-4 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors">
+                                Gerenciar Contas Fixas
+                            </button>
+                            <button id="open-potential-modal" class="w-full text-left py-3 px-4 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors">
+                                Gerenciar Entradas/Saídas Potenciais
+                            </button>
+                            
+                            <!-- NOVO: Container para botões de Import/Export -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="w-full cursor-pointer text-left py-3 px-4 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 text-center block transition-colors">
+                                    <span id="csv-import-label" class="text-sm">Importar (.csv)</span>
+                                    <input type="file" id="csv-file-input" class="hidden" accept=".csv">
+                                </label>
+                                <button id="export-csv-btn" class="w-full text-sm text-left py-3 px-4 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 text-center block transition-colors">
+                                    Exportar (.csv)
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Despesas por Categoria (Gráfico) -->
+                    <!-- Borda para modo claro -->
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                        <h3 class="text-xl font-semibold mb-4">Despesas por Categoria (Mês)</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="category-chart"></canvas>
+                            <p id="chart-no-data" class="text-gray-500 hidden">Sem dados de despesa este mês.</p>
+                        </div>
+                    </div>
+
+                    <!-- Transações Recentes -->
+                    <!-- Borda para modo claro -->
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                        <h3 class="text-xl font-semibold mb-4">Transações Recentes</h3>
+                        <div id="recent-transactions-list" class="space-y-4 max-h-96 overflow-y-auto">
+                            <!-- Lista preenchida dinamicamente -->
+                            <p id="no-transactions" class="text-gray-500">Nenhuma transação registrada.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Página de Gerenciamento de Perfis (Oculta) -->
+        <main id="profiles-page" class="container mx-auto p-4 md:p-6 lg:p-8 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold">Gerenciar Perfis</h2>
+                <button id="back-to-dashboard-btn" class="py-2 px-4 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                    &larr; Voltar ao Painel
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Card "Novo Perfil" -->
+                <!-- Borda para modo claro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-xl font-semibold mb-4">Novo Perfil</h3>
+                    <form id="profile-form" class="space-y-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome do Perfil (ex: Casa)</label>
+                            <input type="text" id="profile-name" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                            <input type="hidden" id="profile-id"> <!-- Para edição -->
+                        </div>
+                        <div>
+                            <label for="profile-salary-bruto" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Salário Bruto (R$)</label>
+                            <input type="text" id="profile-salary-bruto" placeholder="R$ 0,00" class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                        </div>
+                        <div>
+                            <label for="profile-net-salary-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Salário Líquido (Calculado)</label>
+                            <input type="text" id="profile-net-salary-input" readonly class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 shadow-sm">
+                        </div>
+                        <div class="text-right space-x-2">
+                             <button type="button" id="clear-profile-form-btn" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 hidden">
+                                Cancelar Edição
+                            </button>
+                            <button type="submit" id="save-profile-btn" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                Salvar Perfil
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Lista de Perfis Existentes -->
+                <!-- Borda para modo claro -->
+                <div class="md:col-span-1 lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-transparent">
+                    <h3 class="text-xl font-semibold mb-4">Perfis Salvos</h3>
+                    <div id="profiles-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        <p id="no-profiles" class="text-gray-500">Nenhum perfil salvo.</p>
+                        <!-- Perfis preenchidos dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div> <!-- Fim da #app-screen -->
+
+    <!-- **** MODAIS **** -->
+    <!-- (Modais também precisam da correção de borda/fundo) -->
+
+    <!-- Modal de Contas Fixas -->
+    <div id="fixed-bill-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-opacity-70 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden" style="opacity: 0;">
+        <!-- Borda para modo claro -->
+        <div class="modal-content bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-lg border border-gray-200 dark:border-transparent" style="transform: scale(0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold dark:text-gray-100">Gerenciar Contas Fixas</h3>
+                <button id="close-fixed-bill-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <form id="fixed-bill-form" class="space-y-4 mb-6">
+                <input type="hidden" id="bill-id">
+                <div>
+                    <label for="bill-desc" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
+                    <input type="text" id="bill-desc" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                </div>
+                <div>
+                    <label for="bill-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Valor (R$)</label>
+                    <input type="text" id="bill-amount" placeholder="R$ 0,00" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                </div>
+                <div class="text-right">
+                    <button type="submit" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        Salvar Conta Fixa
+                    </button>
+                </div>
+            </form>
+            
+            <hr class="dark:border-gray-700">
+            
+            <h4 class="text-lg font-medium my-4 dark:text-gray-200">Contas Salvas</h4>
+            <div id="fixed-bills-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <p id="no-bills" class="text-gray-500">Nenhuma conta fixa registrada.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Entradas/Saídas Potenciais -->
+    <div id="potential-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-opacity-70 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden" style="opacity: 0;">
+        <!-- Borda para modo claro -->
+        <div class="modal-content bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-lg border border-gray-200 dark:border-transparent" style="transform: scale(0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold dark:text-gray-100">Gerenciar Entradas/Saídas Potenciais</h3>
+                <button id="close-potential-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <form id="potential-form" class="space-y-4 mb-6">
+                <input type="hidden" id="pot-id">
+                <div>
+                    <label for="pot-desc" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
+                    <input type="text" id="pot-desc" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="pot-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Valor (R$)</label>
+                        <input type="text" id="pot-amount" placeholder="R$ 0,00" required class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="pot-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
+                        <select id="pot-type" class="mt-1 block w-full px-4 py-2 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                            <option value="income">Entrada Potencial</option>
+                            <option value="expense">Saída Potencial</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button type="submit" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        Salvar Potencial
+                    </button>
+                </div>
+            </form>
+            
+            <hr class="dark:border-gray-700">
+            
+            <h4 class="text-lg font-medium my-4 dark:text-gray-200">Itens Salvos</h4>
+            <div id="potential-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <p id="no-potentials" class="text-gray-500">Nenhum item registrado.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação de Exclusão -->
+    <div id="delete-confirm-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-opacity-70 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden" style="opacity: 0;">
+        <!-- Borda para modo claro -->
+        <div class="modal-content bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-sm border border-gray-200 dark:border-transparent" style="transform: scale(0.95);">
+            <h3 class="text-xl font-semibold dark:text-gray-100 mb-4">Confirmar Exclusão</h3>
+            <p id="delete-confirm-message" class="text-gray-600 dark:text-gray-300 mb-6">Tem certeza que deseja excluir este item?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-delete-btn" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500">
+                    Cancelar
+                </button>
+                <button id="confirm-delete-btn" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                    Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Mapeamento de CSV -->
+    <div id="csv-map-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-opacity-70 overflow-y-auto h-full w-full flex items-center justify-center z-50 hidden" style="opacity: 0;">
+        <!-- Borda para modo claro -->
+        <div class="modal-content bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-lg border border-gray-200 dark:border-transparent" style="transform: scale(0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold dark:text-gray-100">Mapear Colunas do CSV</h3>
+                <button id="close-csv-map-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <form id="csv-map-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="map-header-row" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Linha do Cabeçalho</label>
+                        <input type="number" id="map-header-row" value="4" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="map-data-start-row" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Dados iniciam na Linha</label>
+                        <input type="number" id="map-data-start-row" value="5" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" id="load-csv-headers-btn" class="w-full py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                            Carregar Cabeçalhos
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Cabeçalhos encontrados:</p>
+                    <code id="csv-headers-preview" class="block w-full bg-gray-100 dark:bg-gray-700 p-2 mt-1 rounded-md text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
+                        Clique em "Carregar Cabeçalhos"
+                    </code>
+                </div>
+
+                <div id="csv-mapping-group" class="space-y-4 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="map-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Coluna da DATA</label>
+                            <select id="map-date" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm"></select>
+                        </div>
+                        <div>
+                            <label for="map-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Coluna da DESCRIÇÃO</label>
+                            <select id="map-description" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm"></select>
+                        </div>
+                        <div>
+                            <label for="map-amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Coluna do VALOR</label>
+                            <select id="map-amount" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="map-date-format" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Formato da Data</label>
+                        <select id="map-date-format" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm">
+                            <option value="dd/mm/aaaa">dd/mm/aaaa (ex: 25/12/2025)</option>
+                            <option value="aaaa-mm-dd">aaaa-mm-dd (ex: 2025-12-25)</option>
+                            <option value="mm/dd/aaaa">mm/dd/aaaa (ex: 12/25/2025)</option>
+                        </select>
+                    </div>
+                    <div class="text-right pt-2">
+                        <button type="submit" class="py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                            Confirmar e Importar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-500 ease-in-out">
+        <p id="toast-message">Transação adicionada!</p>
+    </div>
+
+    <!-- Script principal do App (Firebase e Lógica) -->
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            collection, 
+            query, 
+            where, 
+            onSnapshot,
+            serverTimestamp,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCoeIjdbI1Ps9SKgDd28wyYv952wvZqoZ8",
+          authDomain: "controle-financeiro-65cb9.firebaseapp.com",
+          projectId: "controle-financeiro-65cb9",
+          storageBucket: "controle-financeiro-65cb9.firebasestorage.app",
+          messagingSenderId: "1071761068243",
+          appId: "1:1071761068243:web:73f5306c2fb6bf0442c426"
+        };
+
+        // Inicializa o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug');
+
+        // --- Variáveis Globais de Estado ---
+        let currentUserId = null;
+        let currentProfileId = null;
+        let profiles = [];
+        let allTransactions = [];
+        let fixedBills = [];
+        let categoryChart = null;
+        let totalHistoryChart = null; // NOVO: Variável para o gráfico de histórico
+        
+        // Função para mostrar notificação (Toast)
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            
+            // Remove classes antigas
+            toast.classList.remove('bg-green-500', 'bg-red-500');
+            
+            // Adiciona classe de cor
+            if (type === 'success') {
+                toast.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500');
+            }
+
+            // Animação de entrada
+            toast.classList.remove('translate-x-full');
+            toast.classList.add('translate-x-0');
+
+            // Animação de saída
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-full');
+            }, 3000); // 3 segundos
+        }
+
+        // --- Utilitários de Formatação ---
+        
+        // Converte "R$ 1.234,56" para 1234.56
+        function unformatCurrency(value) {
+            if (!value) return 0;
+            return parseFloat(value.replace('R$ ', '').replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        // Converte 1234.56 para "R$ 1.234,56"
+        function formatCurrency(value) {
+            if (value === null || value === undefined) value = 0;
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+        
+        // Formata o input de moeda dinamicamente
+        function autoFormatCurrency(e) {
+            let value = e.target.value;
+            value = value.replace(/\D/g, ''); // Remove tudo que não for dígito
+            value = value.replace(/(\d)(\d{2})$/, '$1,$2'); // Coloca a vírgula
+            value = value.replace(/(?=(\d{3})+(\D))\B/g, '.'); // Coloca os pontos
+            
+            e.target.value = value ? 'R$ ' + value : '';
+        }
+
+        // --- Lógica do Modo Escuro ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const lightIcon = document.getElementById('theme-icon-light');
+        const darkIcon = document.getElementById('theme-icon-dark');
+        
+        // **** CORREÇÃO: Lógica Vercel (Mostra o PRÓXIMO estado) ****
+        function setDarkMode(isDark) {
+            if (isDark) {
+                // Se ESTÁ escuro
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.remove('hidden'); // MOSTRA o sol (próximo estado: claro)
+                darkIcon.classList.add('hidden');     // ESCONDE a lua
+                localStorage.setItem('theme', 'dark');
+            } else {
+                // Se ESTÁ claro
+                document.documentElement.classList.remove('dark');
+                lightIcon.classList.add('hidden');     // ESCONDE o sol
+                darkIcon.classList.remove('hidden'); // MOSTRA a lua (próximo estado: escuro)
+                localStorage.setItem('theme', 'light');
+            }
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const isCurrentlyDark = document.documentElement.classList.contains('dark');
+            setDarkMode(!isCurrentlyDark); // Inverte o estado atual
+            updateChartTheme(); // Atualiza o gráfico
+        });
+        
+        // **** CORREÇÃO: Lógica Vercel (Respeita o sistema, depois o localStorage) ****
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme) {
+                // Se tem preferência salva (override), usa ela
+                setDarkMode(savedTheme === 'dark');
+            } else {
+                // Se não tem override, usa a preferência do sistema
+                setDarkMode(systemPrefersDark);
+            }
+        }
+        
+        initializeTheme(); // Chama a função assim que o script carregar
+
+        // --- Lógica de Navegação (Telas e Modais) ---
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const showLoginBtn = document.getElementById('show-login-btn');
+        const showRegisterBtn = document.getElementById('show-register-btn');
+        const dashboardPage = document.getElementById('dashboard-page');
+        const profilesPage = document.getElementById('profiles-page');
+        const manageProfilesBtn = document.getElementById('manage-profiles-btn');
+        const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
+        const fixedBillModal = document.getElementById('fixed-bill-modal');
+        const potentialModal = document.getElementById('potential-modal');
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const csvMapModal = document.getElementById('csv-map-modal');
+        let globalCsvData = null; // Armazena os dados do CSV
+        let globalCsvDelimiter = null; // Armazena o delimitador
+
+        // Alterna entre forms de login e registro
+        showRegisterBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        });
+        showLoginBtn.addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // Alterna entre páginas (Dashboard e Perfis)
+        function showPage(pageId) {
+            dashboardPage.classList.add('hidden');
+            profilesPage.classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+        manageProfilesBtn.addEventListener('click', () => showPage('profiles-page'));
+        backToDashboardBtn.addEventListener('click', () => showPage('dashboard-page'));
+        
+        // Função genérica para abrir/fechar modais com animação
+        function toggleModal(modal, show) {
+            if (show) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                    modal.querySelector('.modal-content').style.transform = 'scale(1)';
+                }, 10);
+            } else {
+                modal.style.opacity = '0';
+                modal.querySelector('.modal-content').style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+        
+        // Listeners dos Modais
+        document.getElementById('open-fixed-bill-modal').addEventListener('click', () => toggleModal(fixedBillModal, true));
+        document.getElementById('close-fixed-bill-modal').addEventListener('click', () => toggleModal(fixedBillModal, false));
+        
+        document.getElementById('open-potential-modal').addEventListener('click', () => toggleModal(potentialModal, true));
+        document.getElementById('close-potential-modal').addEventListener('click', () => toggleModal(potentialModal, false));
+        
+        // Listeners do Modal de Mapeamento CSV
+        document.getElementById('close-csv-map-modal').addEventListener('click', () => toggleModal(csvMapModal, false));
+        document.getElementById('csv-map-form').addEventListener('submit', handleCsvMapSubmit);
+        
+        window.addEventListener('click', (e) => {
+            // Fecha modais ao clicar fora
+            if (e.target === fixedBillModal) toggleModal(fixedBillModal, false);
+            if (e.target === potentialModal) toggleModal(potentialModal, false);
+            if (e.target === deleteConfirmModal) toggleModal(deleteConfirmModal, false);
+            if (e.target === csvMapModal) toggleModal(csvMapModal, false);
+        });
+        
+        // --- Lógica de Autenticação ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                authScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                loadProfiles(); // Carrega os perfis do usuário logado
+            } else {
+                currentUserId = null;
+                currentProfileId = null;
+                authScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+                resetDashboard();
+            }
+        });
+        
+        // Registro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const errorEl = document.getElementById('register-error');
+            
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                errorEl.classList.add('hidden');
+            } catch (error) {
+                errorEl.textContent = `Erro: ${error.message}`;
+                errorEl.classList.remove('hidden');
+            }
+        });
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                errorEl.classList.add('hidden');
+            } catch (error) {
+                errorEl.textContent = `Erro: ${error.message}`;
+                errorEl.classList.remove('hidden');
+            }
+        });
+        
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+        // --- Lógica de Perfis ---
+        const profileForm = document.getElementById('profile-form');
+        const profileNameInput = document.getElementById('profile-name');
+        const profileIdInput = document.getElementById('profile-id');
+        const profileSalaryBrutoInput = document.getElementById('profile-salary-bruto');
+        const profileNetSalaryInput = document.getElementById('profile-net-salary-input');
+        const profilesList = document.getElementById('profiles-list');
+        const noProfiles = document.getElementById('no-profiles');
+        const profileSelector = document.getElementById('profile-selector');
+        const clearProfileFormBtn = document.getElementById('clear-profile-form-btn');
+        const saveProfileBtn = document.getElementById('save-profile-btn');
+        
+        profileSalaryBrutoInput.addEventListener('input', (e) => {
+            autoFormatCurrency(e);
+            profileNetSalaryInput.value = formatCurrency(calculateNetSalary(unformatCurrency(e.target.value)));
+        });
+        
+        clearProfileFormBtn.addEventListener('click', () => {
+            profileForm.reset();
+            profileIdInput.value = '';
+            profileNetSalaryInput.value = '';
+            saveProfileBtn.textContent = 'Salvar Perfil';
+            clearProfileFormBtn.classList.add('hidden');
+        });
+        
+        // Salvar (Criar ou Atualizar) Perfil
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUserId) return;
+            
+            // **** CORREÇÃO SALÁRIO LÍQUIDO (RECALCULA AO SALVAR) ****
+            const bruto = unformatCurrency(profileSalaryBrutoInput.value);
+            const liquido = calculateNetSalary(bruto);
+
+            const profileId = profileIdInput.value;
+            const profileData = {
+                name: profileNameInput.value,
+                salaryBruto: bruto,
+                salaryLiquido: liquido, // Usa o valor recém-calculado
+                ownerId: currentUserId
+            };
+            
+            try {
+                let docRef;
+                if (profileId) {
+                    // Atualiza
+                    docRef = doc(db, 'profiles', profileId);
+                    await updateDoc(docRef, profileData);
+                    showToast('Perfil atualizado com sucesso!', 'success');
+                } else {
+                    // Cria
+                    docRef = collection(db, 'profiles');
+                    await addDoc(docRef, profileData);
+                    showToast('Perfil criado com sucesso!', 'success');
+                }
+                clearProfileFormBtn.click(); // Limpa o formulário
+            } catch (error) {
+                console.error("Erro ao salvar perfil: ", error);
+                showToast(`Erro ao salvar perfil: ${error.message}`, 'error');
+            }
+        });
+
+        // Carregar Perfis
+        let profilesUnsubscribe = null;
+        async function loadProfiles() {
+            if (profilesUnsubscribe) profilesUnsubscribe(); // Cancela listener anterior
+            
+            const q = query(collection(db, 'profiles'), where("ownerId", "==", currentUserId));
+            profilesUnsubscribe = onSnapshot(q, (snapshot) => {
+                profiles = [];
+                profilesList.innerHTML = '';
+                profileSelector.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    noProfiles.classList.remove('hidden');
+                    profileSelector.add(new Option('Crie um perfil', ''));
+                    currentProfileId = null;
+                    resetDashboard();
+                    return;
+                }
+                
+                noProfiles.classList.add('hidden');
+                
+                snapshot.forEach((doc) => {
+                    const profile = { id: doc.id, ...doc.data() };
+                    profiles.push(profile);
+                    
+                    // Adiciona ao seletor no header
+                    profileSelector.add(new Option(profile.name, profile.id));
+                    
+                    // Adiciona à lista na página de gerenciamento
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg';
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-medium">${profile.name}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Bruto: ${formatCurrency(profile.salaryBruto)} / Líquido: ${formatCurrency(profile.salaryLiquido)}
+                            </p>
+                        </div>
+                        <div class="space-x-2">
+                            <button class="edit-profile-btn text-blue-500 hover:text-blue-700" data-id="${profile.id}">Editar</button>
+                            <button class="delete-profile-btn text-red-500 hover:text-red-700" data-id="${profile.id}" data-name="${profile.name}">Excluir</button>
+                        </div>
+                    `;
+                    profilesList.appendChild(div);
+                });
+                
+                // Define o perfil ativo
+                if (currentProfileId && profiles.some(p => p.id === currentProfileId)) {
+                    profileSelector.value = currentProfileId;
+                } else {
+                    currentProfileId = profiles[0].id;
+                    profileSelector.value = currentProfileId;
+                }
+                
+                // Carrega os dados do perfil selecionado
+                loadProfileData(currentProfileId);
+            });
+        }
+        
+        // Mudar de perfil no seletor
+        profileSelector.addEventListener('change', () => {
+            currentProfileId = profileSelector.value;
+            loadProfileData(currentProfileId);
+        });
+        
+        // Botões na lista de perfis (Editar/Excluir)
+        profilesList.addEventListener('click', (e) => {
+            const { id, name } = e.target.dataset;
+            
+            if (e.target.classList.contains('edit-profile-btn')) {
+                const profile = profiles.find(p => p.id === id);
+                if (profile) {
+                    profileIdInput.value = profile.id;
+                    profileNameInput.value = profile.name;
+                    profileSalaryBrutoInput.value = formatCurrency(profile.salaryBruto);
+                    // Dispara o evento de input para recalcular o líquido
+                    profileSalaryBrutoInput.dispatchEvent(new Event('input')); 
+                    
+                    saveProfileBtn.textContent = 'Atualizar Perfil';
+                    clearProfileFormBtn.classList.remove('hidden');
+                }
+            }
+            
+            if (e.target.classList.contains('delete-profile-btn')) {
+                showDeleteConfirm('profile', id, `Tem certeza que deseja excluir o perfil "${name}"? Isso apagará TODOS os dados associados a ele.`);
+            }
+        });
+
+        // --- Lógica de Cálculo de Salário (INSS/IRRF) ---
+        function calculateNetSalary(bruto) {
+            if (bruto === 0) {
+                return 0;
+            }
+            let inss = 0;
+            if (bruto <= 1412.00) inss = bruto * 0.075;
+            else if (bruto <= 2666.68) inss = (bruto * 0.09) - 21.18;
+            else if (bruto <= 4000.03) inss = (bruto * 0.12) - 101.18;
+            else if (bruto <= 7786.02) inss = (bruto * 0.14) - 181.18;
+            else inss = 908.85; // Teto
+            
+            const baseIrrf = bruto - inss;
+            let irrf = 0;
+            if (baseIrrf <= 2259.20) irrf = 0;
+            else if (baseIrrf <= 2826.65) irrf = (baseIrrf * 0.075) - 169.44;
+            else if (baseIrrf <= 3751.05) irrf = (baseIrrf * 0.15) - 381.44;
+            else if (baseIrrf <= 4664.68) irrf = (baseIrrf * 0.225) - 662.77;
+            else irrf = (baseIrrf * 0.275) - 896.00;
+            
+            const liquido = bruto - inss - irrf;
+            return liquido;
+        }
+
+        // --- Lógica Principal do Dashboard ---
+        const transForm = document.getElementById('transaction-form');
+        const transDesc = document.getElementById('trans-desc');
+        const transAmount = document.getElementById('trans-amount');
+        const transDate = document.getElementById('trans-date');
+        const transCategory = document.getElementById('trans-category');
+        const transTypeToggle = document.getElementById('trans-type-toggle');
+        const recentTransList = document.getElementById('recent-transactions-list');
+        const noTransactions = document.getElementById('no-transactions');
+        const csvFileInput = document.getElementById('csv-file-input');
+        const csvImportLabel = document.getElementById('csv-import-label');
+        const exportCsvBtn = document.getElementById('export-csv-btn'); // NOVO: Botão de Exportar
+        
+        // NOVO: Botão de Lançar Salário
+        const launchSalaryBtn = document.getElementById('launch-salary-btn');
+        launchSalaryBtn.addEventListener('click', launchSalary);
+        
+        // NOVO: Listener do botão de exportar
+        exportCsvBtn.addEventListener('click', exportToCsv);
+
+        [transAmount, profileSalaryBrutoInput, document.getElementById('bill-amount'), document.getElementById('pot-amount')].forEach(input => {
+            input.addEventListener('input', autoFormatCurrency);
+        });
+
+        const categories = {
+            income: ['Salário', 'Vendas', 'Freelance', 'Investimentos', 'Outras Receitas', 'Receita Importada'],
+            expense: ['Contas (Água, Luz, etc.)', 'Aluguel/Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Compras', 'Outras Despesas', 'Despesa Importada']
+        };
+        
+        function updateCategoryOptions(type) {
+            transCategory.innerHTML = '';
+            categories[type].forEach(cat => {
+                const option = new Option(cat, cat);
+                transCategory.add(option);
+            });
+        }
+        
+        transTypeToggle.addEventListener('change', () => {
+            const isIncome = transTypeToggle.checked;
+            updateCategoryOptions(isIncome ? 'income' : 'expense');
+        });
+        
+        updateCategoryOptions('expense');
+        transDate.valueAsDate = new Date();
+
+        let transUnsub = null;
+        let billsUnsub = null;
+        let potentialUnsub = null;
+
+        function loadProfileData(profileId) {
+            if (!profileId) {
+                resetDashboard();
+                return;
+            }
+            
+            if (transUnsub) transUnsub();
+            if (billsUnsub) billsUnsub();
+            if (potentialUnsub) potentialUnsub();
+            
+            const transQuery = query(collection(db, 'transactions'), where("profileId", "==", profileId));
+            transUnsub = onSnapshot(transQuery, (snapshot) => {
+                allTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allTransactions.sort((a, b) => b.date.localeCompare(a.date));
+                updateDashboard();
+            });
+            
+            const billsQuery = query(collection(db, 'fixedBills'), where("profileId", "==", profileId));
+            billsUnsub = onSnapshot(billsQuery, (snapshot) => {
+                fixedBills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderFixedBills();
+                updateDashboard();
+            });
+            
+            const potQuery = query(collection(db, 'potentialItems'), where("profileId", "==", profileId));
+            potentialUnsub = onSnapshot(potQuery, (snapshot) => {
+                const potentials = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPotentialItems(potentials);
+            });
+        }
+        
+        function resetDashboard() {
+            if (transUnsub) transUnsub();
+            if (billsUnsub) billsUnsub();
+            if (potentialUnsub) potentialUnsub();
+            allTransactions = [];
+            fixedBills = [];
+            document.getElementById('summary-balance').textContent = formatCurrency(0);
+            document.getElementById('summary-income').textContent = formatCurrency(0);
+            document.getElementById('summary-expense').textContent = formatCurrency(0);
+            document.getElementById('summary-daily-spend').textContent = formatCurrency(0);
+            recentTransList.innerHTML = '';
+            noTransactions.classList.remove('hidden');
+            renderFixedBills();
+            renderPotentialItems([]);
+            
+            // Limpa os dois gráficos
+            if (categoryChart) categoryChart.destroy();
+            document.getElementById('chart-no-data').classList.remove('hidden');
+            if (totalHistoryChart) totalHistoryChart.destroy();
+            document.getElementById('history-chart-no-data').classList.remove('hidden');
+        }
+
+        transForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+            const isIncome = transTypeToggle.checked;
+            const amount = unformatCurrency(transAmount.value);
+            const transaction = {
+                profileId: currentProfileId,
+                description: transDesc.value,
+                amount: isIncome ? amount : -amount,
+                date: transDate.value,
+                category: transCategory.value,
+                type: isIncome ? 'income' : 'expense',
+                createdAt: serverTimestamp()
+            };
+            try {
+                await addDoc(collection(db, 'transactions'), transaction);
+                showToast(isIncome ? 'Receita adicionada!' : 'Despesa adicionada!', 'success');
+                transForm.reset();
+                transDate.valueAsDate = new Date();
+                updateCategoryOptions('expense');
+                transTypeToggle.checked = false;
+            } catch (error) {
+                console.error("Erro ao salvar transação: ", error);
+                showToast(`Erro ao salvar: ${error.message}`, 'error');
+            }
+        });
+        
+        // FUNÇÃO para Lançar Salário
+        async function launchSalary() {
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+
+            // 1. Pega o perfil e o salário
+            const profile = profiles.find(p => p.id === currentProfileId);
+            if (!profile || !profile.salaryLiquido || profile.salaryLiquido === 0) {
+                return showToast('Defina seu salário líquido na tela de "Gerenciar Perfis" primeiro.', 'error');
+            }
+
+            // 2. Verifica se já foi lançado este mês
+            const now = new Date();
+            const currentMonth = now.toISOString().slice(0, 7); // Formato "AAAA-MM"
+            const alreadyLaunched = allTransactions.some(t => 
+                t.date.startsWith(currentMonth) && t.category === 'Salário'
+            );
+
+            if (alreadyLaunched) {
+                return showToast('O salário já foi lançado este mês.', 'error');
+            }
+
+            // 3. Cria a transação
+            const transaction = {
+                profileId: currentProfileId,
+                description: "Salário (Lançamento Rápido)",
+                amount: profile.salaryLiquido,
+                date: now.toISOString().slice(0, 10), // Data de hoje
+                category: "Salário",
+                type: "income",
+                createdAt: serverTimestamp()
+            };
+
+            // 4. Salva no Firebase
+            try {
+                await addDoc(collection(db, 'transactions'), transaction);
+                showToast('Salário lançado com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao lançar salário: ", error);
+                showToast(`Erro ao lançar salário: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateDashboard() {
+            if (!currentProfileId) return;
+            const now = new Date();
+            const currentMonth = now.toISOString().slice(0, 7);
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalBalance = 0;
+            const monthlyTransactions = allTransactions.filter(t => t.date.startsWith(currentMonth));
+            
+            allTransactions.forEach(t => {
+                totalBalance += t.amount;
+                if (t.date.startsWith(currentMonth)) {
+                    if (t.amount > 0) totalIncome += t.amount;
+                    else totalExpense += t.amount;
+                }
+            });
+            
+            document.getElementById('summary-balance').textContent = formatCurrency(totalBalance);
+            document.getElementById('summary-income').textContent = formatCurrency(totalIncome);
+            document.getElementById('summary-expense').textContent = formatCurrency(totalExpense);
+            
+            const totalFixedBills = fixedBills.reduce((sum, bill) => sum + bill.amount, 0);
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const remainingDays = daysInMonth - now.getDate() + 1;
+            const availableToSpend = totalIncome + totalExpense - totalFixedBills;
+            const dailySpendEl = document.getElementById('summary-daily-spend');
+            const dailyWarningEl = document.getElementById('daily-spend-warning');
+            
+            if (remainingDays > 0) {
+                const dailyAmount = availableToSpend / remainingDays;
+                dailySpendEl.textContent = formatCurrency(dailyAmount);
+                if (dailyAmount < 0) {
+                    dailySpendEl.classList.add('text-red-500');
+                    dailySpendEl.classList.remove('text-blue-500');
+                    dailyWarningEl.textContent = 'Atenção! Você já ultrapassou seu orçamento para o mês.';
+                } else {
+                    dailySpendEl.classList.remove('text-red-500');
+                    dailySpendEl.classList.add('text-blue-500');
+                    dailyWarningEl.textContent = 'Calculado com base na sua Receita do Mês menos contas fixas e despesas já lançadas, dividido pelos dias restantes no mês.';
+                }
+            } else {
+                dailySpendEl.textContent = formatCurrency(0);
+            }
+            
+            renderRecentTransactions();
+            renderCategoryChart(monthlyTransactions);
+            renderHistoryChart(allTransactions); // Chama a função do gráfico de histórico
+        }
+        
+        function renderRecentTransactions() {
+            recentTransList.innerHTML = '';
+            if (allTransactions.length === 0) {
+                noTransactions.classList.remove('hidden');
+                return;
+            }
+            noTransactions.classList.add('hidden');
+            const recent = allTransactions.slice(0, 10);
+            recent.forEach(t => {
+                const isIncome = t.amount > 0;
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center group';
+                // *** CORREÇÃO: Trata data que pode já ser 'YYYY-MM-DD'
+                let formattedDate = t.date;
+                if (t.date.includes('-')) {
+                    const [year, month, day] = t.date.split('-');
+                    formattedDate = `${day}/${month}/${year}`;
+                }
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-8 h-8 rounded-full flex items-center justify-center ${isIncome ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}">
+                            <!-- Ícone aqui -->
+                        </span>
+                        <div>
+                            <p class="font-medium">${t.description}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">${formattedDate} - ${t.category}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-medium ${isIncome ? 'text-green-500' : 'text-red-500'}">
+                            ${isIncome ? '+' : ''}${formatCurrency(t.amount)}
+                        </span>
+                        <button class="delete-transaction-btn text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${t.id}" data-name="${t.description}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                `;
+                recentTransList.appendChild(div);
+            });
+        }
+        
+        recentTransList.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-transaction-btn');
+            if (deleteBtn) {
+                const { id, name } = deleteBtn.dataset;
+                showDeleteConfirm('transaction', id, `Tem certeza que deseja excluir a transação "${name}"?`);
+            }
+        });
+        
+        function renderCategoryChart(transactions) {
+            const ctx = document.getElementById('category-chart').getContext('2d');
+            const noDataEl = document.getElementById('chart-no-data');
+            const expenseTransactions = transactions.filter(t => t.type === 'expense');
+            if (expenseTransactions.length === 0) {
+                if (categoryChart) categoryChart.destroy();
+                noDataEl.classList.remove('hidden');
+                return;
+            }
+            noDataEl.classList.add('hidden');
+            const categoryData = expenseTransactions.reduce((acc, t) => {
+                const category = t.category || 'Outras Despesas';
+                const amount = Math.abs(t.amount);
+                if (!acc[category]) {
+                    acc[category] = 0;
+                }
+                acc[category] += amount;
+                return acc;
+            }, {});
+            const labels = Object.keys(categoryData);
+            const data = Object.values(categoryData);
+            const chartColors = ['#4f46e5', '#ec4899', '#f97316', '#22c55e', '#0ea5e9', '#f59e0b', '#8b5cf6', '#d946ef'];
+            if (categoryChart) categoryChart.destroy();
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: chartColors,
+                        borderColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw || 0;
+                                    return `${label}: ${formatCurrency(value)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Função para renderizar o gráfico de histórico
+        function renderHistoryChart(transactions) {
+            const ctx = document.getElementById('total-history-chart').getContext('2d');
+            const noDataEl = document.getElementById('history-chart-no-data');
+            
+            if (transactions.length === 0) {
+                if (totalHistoryChart) totalHistoryChart.destroy();
+                noDataEl.classList.remove('hidden');
+                return;
+            }
+            noDataEl.classList.add('hidden');
+            
+            const totalIncomeAllTime = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenseAllTime = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
+            const totalBalanceAllTime = totalIncomeAllTime + totalExpenseAllTime;
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const tickColor = isDark ? '#d1d5db' : '#374151';
+
+            if (totalHistoryChart) totalHistoryChart.destroy();
+            totalHistoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Receita Total', 'Despesa Total', 'Saldo Total'],
+                    datasets: [{
+                        label: 'Valores Totais',
+                        data: [totalIncomeAllTime, Math.abs(totalExpenseAllTime), totalBalanceAllTime],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.7)',  // green-500
+                            'rgba(239, 68, 68, 0.7)',  // red-500
+                            'rgba(79, 70, 229, 0.7)'   // indigo-600
+                        ],
+                        borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(239, 68, 68)',
+                            'rgb(79, 70, 229)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                           display: false // Oculta a legenda
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.raw || 0;
+                                    // Mostra o valor negativo real da despesa no tooltip
+                                    if (context.dataIndex === 1) { 
+                                        value = totalExpenseAllTime;
+                                    }
+                                    return `${context.label}: ${formatCurrency(value)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { 
+                                color: tickColor,
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: tickColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChartTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const tickColor = isDark ? '#d1d5db' : '#374151';
+
+            if (categoryChart) {
+                categoryChart.options.plugins.legend.labels.color = tickColor;
+                categoryChart.data.datasets[0].borderColor = isDark ? '#1f2937' : '#ffffff';
+                categoryChart.update();
+            }
+            
+            // ATUALIZA O NOVO GRÁFICO
+            if (totalHistoryChart) {
+                totalHistoryChart.options.scales.y.ticks.color = tickColor;
+                totalHistoryChart.options.scales.x.ticks.color = tickColor;
+                totalHistoryChart.options.scales.y.grid.color = gridColor;
+                totalHistoryChart.update();
+            }
+        }
+
+        // --- Lógica de Contas Fixas ---
+        const fixedBillForm = document.getElementById('fixed-bill-form');
+        const billIdInput = document.getElementById('bill-id');
+        const billDescInput = document.getElementById('bill-desc');
+        const billAmountInput = document.getElementById('bill-amount');
+        const fixedBillsList = document.getElementById('fixed-bills-list');
+        const noBills = document.getElementById('no-bills');
+
+        fixedBillForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+            const billId = billIdInput.value;
+            const bill = {
+                profileId: currentProfileId,
+                description: billDescInput.value,
+                amount: unformatCurrency(billAmountInput.value)
+            };
+            try {
+                if (billId) {
+                    await updateDoc(doc(db, 'fixedBills', billId), bill);
+                    showToast('Conta fixa atualizada!', 'success');
+                } else {
+                    await addDoc(collection(db, 'fixedBills'), bill);
+                    showToast('Conta fixa salva!', 'success');
+                }
+                fixedBillForm.reset();
+                billIdInput.value = '';
+            } catch (error) {
+                showToast(`Erro: ${error.message}`, 'error');
+            }
+        });
+        
+        function renderFixedBills() {
+            fixedBillsList.innerHTML = '';
+            if (fixedBills.length === 0) {
+                noBills.classList.remove('hidden');
+                return;
+            }
+            noBills.classList.add('hidden');
+            fixedBills.forEach(bill => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-lg group';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium">${bill.description}</p>
+                        <p class="text-sm text-red-500">${formatCurrency(bill.amount)}</p>
+                    </div>
+                    <div class="space-x-2 opacity-0 group-hover:opacity-100">
+                        <button class="edit-bill-btn text-blue-500 hover:text-blue-700" data-id="${bill.id}">Editar</button>
+                        <button class="delete-bill-btn text-red-500 hover:text-red-700" data-id="${bill.id}" data-name="${bill.description}">Excluir</button>
+                    </div>
+                `;
+                fixedBillsList.appendChild(div);
+            });
+        }
+        
+        fixedBillsList.addEventListener('click', (e) => {
+            const { id, name } = e.target.dataset;
+            if (e.target.classList.contains('edit-bill-btn')) {
+                const bill = fixedBills.find(b => b.id === id);
+                if (bill) {
+                    billIdInput.value = bill.id;
+                    billDescInput.value = bill.description;
+                    billAmountInput.value = formatCurrency(bill.amount);
+                }
+            }
+            if (e.target.classList.contains('delete-bill-btn')) {
+                showDeleteConfirm('fixedBill', id, `Tem certeza que deseja excluir a conta "${name}"?`);
+            }
+        });
+
+        // --- Lógica de Itens Potenciais ---
+        const potentialForm = document.getElementById('potential-form');
+        const potIdInput = document.getElementById('pot-id');
+        const potDescInput = document.getElementById('pot-desc');
+        const potAmountInput = document.getElementById('pot-amount');
+        const potTypeInput = document.getElementById('pot-type');
+        const potentialList = document.getElementById('potential-list');
+        const noPotentials = document.getElementById('no-potentials');
+        
+        potentialForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+            const potId = potIdInput.value;
+            const item = {
+                profileId: currentProfileId,
+                description: potDescInput.value,
+                amount: unformatCurrency(potAmountInput.value),
+                type: potTypeInput.value
+            };
+            try {
+                if (potId) {
+                    await updateDoc(doc(db, 'potentialItems', potId), item);
+                    showToast('Item atualizado!', 'success');
+                } else {
+                    await addDoc(collection(db, 'potentialItems'), item);
+                    showToast('Item salvo!', 'success');
+                }
+                potentialForm.reset();
+                potIdInput.value = '';
+            } catch (error) {
+                showToast(`Erro: ${error.message}`, 'error');
+            }
+        });
+        
+        function renderPotentialItems(potentials) {
+            potentialList.innerHTML = '';
+            if (potentials.length === 0) {
+                noPotentials.classList.remove('hidden');
+                return;
+            }
+            noPotentials.classList.add('hidden');
+            potentials.forEach(item => {
+                const isIncome = item.type === 'income';
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-lg group';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium">${item.description}</p>
+                        <p class="text-sm ${isIncome ? 'text-green-500' : 'text-red-500'}">
+                            ${isIncome ? 'Entrada:' : 'Saída:'} ${formatCurrency(item.amount)}
+                        </p>
+                    </div>
+                    <div class="space-x-2 opacity-0 group-hover:opacity-100">
+                        <button class="edit-potential-btn text-blue-500 hover:text-blue-700" data-id="${item.id}">Editar</button>
+                        <button class="delete-potential-btn text-red-500 hover:text-red-700" data-id="${item.id}" data-name="${item.description}">Excluir</button>
+                    </div>
+                `;
+                potentialList.appendChild(div);
+                div.querySelector('.edit-potential-btn').addEventListener('click', () => {
+                    potIdInput.value = item.id;
+                    potDescInput.value = item.description;
+                    potAmountInput.value = formatCurrency(item.amount);
+                    potTypeInput.value = item.type;
+                });
+                div.querySelector('.delete-potential-btn').addEventListener('click', () => {
+                    showDeleteConfirm('potentialItem', item.id, `Tem certeza que deseja excluir o item "${item.description}"?`);
+                });
+            });
+        }
+        
+        // --- Lógica de Exclusão Genérica ---
+        const deleteConfirmMsg = document.getElementById('delete-confirm-message');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        let deleteInfo = { type: null, id: null };
+        
+        function showDeleteConfirm(type, id, message) {
+            deleteInfo = { type, id };
+            deleteConfirmMsg.textContent = message;
+            toggleModal(deleteConfirmModal, true);
+        }
+        
+        cancelDeleteBtn.addEventListener('click', () => {
+            toggleModal(deleteConfirmModal, false);
+            deleteInfo = { type: null, id: null };
+        });
+        
+        confirmDeleteBtn.addEventListener('click', async () => {
+            const { type, id } = deleteInfo;
+            if (!type || !id) return;
+            let docRef;
+            try {
+                if (type === 'transaction') docRef = doc(db, 'transactions', id);
+                else if (type === 'fixedBill') docRef = doc(db, 'fixedBills', id);
+                else if (type === 'potentialItem') docRef = doc(db, 'potentialItems', id);
+                else if (type === 'profile') docRef = doc(db, 'profiles', id); // TODO: Excluir dados filhos
+                
+                await deleteDoc(docRef);
+                showToast('Item excluído com sucesso!', 'success');
+            } catch (error) {
+                showToast(`Erro ao excluir: ${error.message}`, 'error');
+            }
+            toggleModal(deleteConfirmModal, false);
+            deleteInfo = { type: null, id: null };
+        });
+        
+        // --- Funções de Importação/Exportação CSV ---
+        csvFileInput.addEventListener('change', handleCsvFile);
+        
+        // NOVO: Função de Exportar CSV
+        function exportToCsv() {
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+            if (allTransactions.length === 0) return showToast('Não há transações para exportar.', 'error');
+
+            // Formata o nome do perfil e a data
+            const profileName = profiles.find(p => p.id === currentProfileId)?.name || 'Perfil';
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const fileName = `Extrato_${profileName.replace(/ /g, '_')}_${dateStr}.csv`;
+
+            // Cabeçalho (Padrão Excel BR)
+            let csvContent = "Data;Descricao;Categoria;Valor (R$)\n";
+
+            // Adiciona as linhas
+            allTransactions.forEach(t => {
+                // Formata a data para dd/mm/aaaa
+                const [year, month, day] = t.date.split('-');
+                const formattedDate = `${day}/${month}/${year}`;
+                
+                // Formata o valor para 1234,56
+                const formattedAmount = (t.amount).toFixed(2).replace('.', ',');
+                
+                // Limpa a descrição de ponto-e-vírgula para não quebrar o CSV
+                const cleanDescription = `"${t.description.replace(/"/g, '""')}"`;
+                const cleanCategory = `"${t.category.replace(/"/g, '""')}"`;
+
+                csvContent += `${formattedDate};${cleanDescription};${cleanCategory};${formattedAmount}\n`;
+            });
+
+            // Cria e baixa o arquivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            showToast('Extrato exportado com sucesso!', 'success');
+        }
+
+        function unformatCsvCurrency(value) {
+            if (!value) return 0;
+            value = value.replace(/"/g, '');
+            // Verifica se a vírgula é o último separador decimal
+            if (value.lastIndexOf(',') > value.lastIndexOf('.')) {
+                return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0; // Formato 1.234,56
+            } else {
+                return parseFloat(value.replace(/,/g, '')) || 0; // Formato 1,234.56
+            }
+        }
+
+        async function handleCsvFile(e) {
+            if (!currentProfileId) return showToast('Selecione um perfil primeiro.', 'error');
+            const file = e.target.files[0];
+            if (!file) return;
+            csvImportLabel.textContent = 'Processando...';
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const csvData = event.target.result;
+                    globalCsvData = csvData;
+                    // Detecção de delimitador
+                    let delimiter = ';';
+                    const firstLine = csvData.split('\n')[0].trim();
+                    if (firstLine.split(',').length > firstLine.split(';').length) {
+                        delimiter = ',';
+                    }
+                    globalCsvDelimiter = delimiter;
+                    
+                    // Limpa o estado do modal
+                    document.getElementById('csv-headers-preview').textContent = 'Clique em "Carregar Cabeçalhos"';
+                    document.getElementById('csv-mapping-group').classList.add('hidden');
+                    const selects = ['map-date', 'map-description', 'map-amount'];
+                    selects.forEach(selectId => {
+                        document.getElementById(selectId).innerHTML = '';
+                    });
+                    
+                    // Abre o modal
+                    toggleModal(csvMapModal, true);
+                    
+                } catch (error) {
+                    console.error("Erro ao ler CSV: ", error);
+                    showToast('Falha ao ler o arquivo CSV.', 'error');
+                }
+                csvImportLabel.textContent = 'Importar (.csv)';
+            };
+            // **** CORREÇÃO CSV (ENCODING) ****
+            reader.readAsText(file, 'UTF-8'); // Trocado de ISO-8859-1 para UTF-8
+            e.target.value = null; // Limpa o input para permitir re-upload
+        }
+
+        // Carrega cabeçalhos do CSV no modal
+        document.getElementById('load-csv-headers-btn').addEventListener('click', () => {
+            if (!globalCsvData) {
+                showToast('Nenhum arquivo CSV carregado.', 'error');
+                return;
+            }
+            
+            try {
+                const headerRow = parseInt(document.getElementById('map-header-row').value);
+                if (isNaN(headerRow) || headerRow < 1) {
+                    showToast('Número da linha do cabeçalho inválido.', 'error');
+                    return;
+                }
+
+                const lines = globalCsvData.split('\n');
+                const headerLine = lines[headerRow - 1].trim();
+                
+                if (!headerLine) {
+                     showToast('Linha do cabeçalho está em branco.', 'error');
+                     return;
+                }
+
+                const headers = headerLine.split(globalCsvDelimiter).map(h => h.replace(/"/g, '').trim());
+                
+                // Popula os selects
+                const selects = ['map-date', 'map-description', 'map-amount'];
+                selects.forEach(selectId => {
+                    const selectEl = document.getElementById(selectId);
+                    selectEl.innerHTML = ''; // Limpa
+                    headers.forEach((header, index) => {
+                        const option = document.createElement('option');
+                        option.value = index.toString(); // Salva o índice da coluna
+                        option.textContent = header;
+                        selectEl.appendChild(option);
+                    });
+                });
+                
+                // Tenta pré-selecionar
+                document.getElementById('map-date').value = headers.findIndex(h => h.toLowerCase().includes('data') || h.toLowerCase().includes('release_date')).toString();
+                document.getElementById('map-description').value = headers.findIndex(h => h.toLowerCase().includes('desc') || h.toLowerCase().includes('histórico') || h.toLowerCase().includes('transaction_type')).toString(); // Adicionado transaction_type
+                document.getElementById('map-amount').value = headers.findIndex(h => h.toLowerCase().includes('valor') || h.toLowerCase().includes('net_amount')).toString(); // Adicionado net_amount
+
+                // Mostra preview
+                document.getElementById('csv-headers-preview').textContent = headers.join(` ${globalCsvDelimiter} `);
+                document.getElementById('csv-mapping-group').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error("Erro ao carregar cabeçalhos:", error);
+                showToast('Erro ao ler a linha do cabeçalho. Verifique o número da linha.', 'error');
+            }
+        });
+
+        // Submit do form de mapeamento
+        async function handleCsvMapSubmit(e) {
+            e.preventDefault();
+            
+            const mapping = {
+                dateIndex: parseInt(document.getElementById('map-date').value),
+                descIndex: parseInt(document.getElementById('map-description').value),
+                amountIndex: parseInt(document.getElementById('map-amount').value),
+                dateFormat: document.getElementById('map-date-format').value,
+                headerRow: parseInt(document.getElementById('map-header-row').value),
+                dataStartRow: parseInt(document.getElementById('map-data-start-row').value)
+            };
+            
+            if (isNaN(mapping.dataStartRow) || mapping.dataStartRow < 1) {
+                showToast('Linha de início de dados inválida.', 'error');
+                return;
+            }
+
+            if (globalCsvData && globalCsvDelimiter && mapping) {
+                toggleModal(csvMapModal, false);
+                await parseAndImportCsv(globalCsvData, globalCsvDelimiter, mapping);
+            } else {
+                showToast('Erro ao processar mapeamento.', 'error');
+            }
+            
+            globalCsvData = null;
+            globalCsvDelimiter = null;
+        }
+
+        // Função de Parse e Importação
+        async function parseAndImportCsv(csvData, delimiter, mapping) {
+            let importedCount = 0;
+            let failedCount = 0;
+            const lines = csvData.split('\n');
+            
+            // Itera a partir da linha de início dos dados
+            for (let i = (mapping.dataStartRow - 1); i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) {
+                    // Não conta linhas em branco como falha, apenas pula
+                    continue; 
+                }
+
+                const parsed = parseCsvLine(line, delimiter, mapping);
+                
+                if (parsed) {
+                    try {
+                        await addDoc(collection(db, 'transactions'), parsed);
+                        importedCount++;
+                    } catch (error) {
+                        console.error("Erro ao salvar transação importada:", error);
+                        failedCount++;
+                    }
+                } else {
+                    // Apenas conta como falha se não estiver em branco mas for inválida
+                    if (line) failedCount++;
+                }
+            }
+            
+            // Feedback final
+            if (importedCount > 0) {
+                showToast(`${importedCount} transações importadas! (${failedCount} linhas falharam)`, 'success');
+            } else {
+                showToast(`Falha na importação. ${failedCount} linhas falharam. Verifique o formato e o mapeamento.`, 'error');
+            }
+        }
+            
+        // Função que parseia uma linha individual
+        function parseCsvLine(line, delimiter, mapping) {
+            try {
+                const columns = line.split(delimiter).map(col => col.trim().replace(/^"|"$/g, ''));
+                
+                if (columns.length <= Math.max(mapping.dateIndex, mapping.descIndex, mapping.amountIndex)) {
+                     console.warn("Linha com colunas insuficientes:", line);
+                     return null;
+                }
+                
+                const dateStr = columns[mapping.dateIndex];
+                const description = columns[mapping.descIndex];
+                const amountStr = columns[mapping.amountIndex];
+
+                if (!dateStr || !description || !amountStr) {
+                    console.warn("Dados ausentes na linha:", line);
+                    return null;
+                }
+                
+                // **** CORREÇÃO CSV (DATA HÍFEN/BARRA) ****
+                // Normaliza a data, trocando hífens por barras
+                const normalizedDateStr = dateStr.replace(/-/g, '/');
+                
+                // Parse da Data
+                let day, month, year;
+                if (mapping.dateFormat === 'aaaa-mm-dd') {
+                    // Mesmo sendo aaaa-mm-dd, normalizamos para split('/')
+                    [year, month, day] = normalizedDateStr.split('/').map(Number);
+                } else if (mapping.dateFormat === 'mm/dd/aaaa') {
+                    [month, day, year] = normalizedDateStr.split('/').map(Number);
+                } else { // dd/mm/aaaa
+                    [day, month, year] = normalizedDateStr.split('/').map(Number);
+                }
+                
+                if (!day || !month || !year || isNaN(day) || isNaN(month) || isNaN(year)) {
+                    console.warn("Data inválida:", dateStr); // Loga a string original
+                    return null;
+                }
+                if (year < 100) year += 2000; // Converte '25' para '2025'
+                
+                const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                // Parse do Valor
+                const amount = unformatCsvCurrency(amountStr);
+                
+                // **** CORREÇÃO CSV (VALOR ZERO) ****
+                // Removida a verificação `|| amount === 0`
+                if (isNaN(amount)) {
+                    console.warn("Valor inválido:", amountStr);
+                    return null;
+                }
+                
+                const isIncome = amount > 0;
+
+                return {
+                    profileId: currentProfileId,
+                    description: description,
+                    amount: amount,
+                    date: isoDate,
+                    category: isIncome ? 'Receita Importada' : 'Despesa Importada',
+                    type: isIncome ? 'income' : 'expense',
+                    createdAt: serverTimestamp()
+                };
+            } catch (error) {
+                console.warn("Falha ao parsear linha CSV:", line, error);
+                return null;
+            }
+        }
+
+    </script>
+</body>
+</html>
